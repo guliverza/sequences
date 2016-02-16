@@ -1,6 +1,7 @@
 This is example application of founding sequence next element.
 
 sbt "runMain App 1 1 2 3 5"
+
 sbt "run 1 11 111 1111"
 
 * sbt 0.13.5
