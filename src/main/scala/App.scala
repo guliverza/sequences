@@ -8,7 +8,7 @@ object App {
   val Div: Func = { case a :: b :: z if a != 0 && b % a == 0 => b / a }
   val Mult: Func = { case a :: b :: z => a * (z.headOption getOrElse b) }
   val DivReverse: Func = { case a :: b :: z if b != 0 && a % b == 0 => a / b }
-  val MultReverse: Func = { case a :: b :: z => a / (z.headOption getOrElse b) }
+  val MultReverse: Func = { case a :: b :: z => (z.headOption getOrElse b) / a}
   val FiboUp: Func = { case a :: b :: c :: Nil => a * c - b*b }
   val FiboDown: Func = { case n :: a :: b :: Nil => if (a == 0) n + b else (n + b*b)/a }
 
