@@ -1,18 +1,38 @@
 
 object App {
-  type Func = PartialFunction[List[Long], Long]
-  type Floor = (List[Long], Func)
+  type Upstairs = PartialFunction[List[Long], Long]
+  type Downstairs = Function[List[Long], Long]
+  type Floor = (List[Long], Downstairs)
 
-  val Minus: Func = { case a :: b :: z => b - a }
-  val Plus: Func = { case a :: b :: z => a + (z.headOption getOrElse b) }
-  val Div: Func = { case a :: b :: z if a != 0 && b % a == 0 => b / a }
-  val Mult: Func = { case a :: b :: z => a * (z.headOption getOrElse b) }
-  val DivReverse: Func = { case a :: b :: z if b != 0 && a % b == 0 => a / b }
-  val MultReverse: Func = { case a :: b :: z => (z.headOption getOrElse b) / a}
-  val FiboUp: Func = { case a :: b :: c :: Nil => a * c - b*b }
-  val FiboDown: Func = { case n :: a :: b :: Nil => if (a == 0) n + b else (n + b*b)/a }
+  val Minus: Upstairs = { case a :: b :: z => b - a }
+  val Plus = new Downstairs {
+    def apply(a: List[Long]) = a.head + a.last
+    override def toString(): String = "+"
+  }
 
-  val Bricks: Seq[(Func, Func)] = Seq(Minus -> Plus, Div -> Mult, DivReverse -> MultReverse, FiboUp -> FiboDown)
+  val Div: Upstairs = { case a :: b :: z if a != 0 && b % a == 0 => b / a }
+  val Mult = new Downstairs {
+    def apply(x: List[Long]) = x.head * x.last
+    override def toString(): String = "*"
+  }
+
+  val DivReverse: Upstairs = { case a :: b :: z if b != 0 && a % b == 0 => a / b }
+  val MultReverse = new Downstairs {
+    def apply(x: List[Long]) = x.last / x.head
+
+    override def toString(): String = "/"
+  }
+
+  val FiboUp: Upstairs = { case a :: b :: c :: Nil => a * c - b * b }
+  val FiboDown = new Downstairs {
+    override def apply(x: List[Long]): Long = x match {
+      case n :: a :: b :: Nil => if (a == 0) n + b else (n + b * b) / a
+    }
+
+    override def toString(): String = "fibbo"
+  }
+
+  val Bricks: Seq[(Upstairs, Downstairs)] = Seq(Minus -> Plus, Div -> Mult, DivReverse -> MultReverse, FiboUp -> FiboDown)
 
   def main(args: Array[String]) {
     println(calcNext((args map (_.toLong)).toList))
@@ -22,7 +42,7 @@ object App {
     val pyramid = build(sequence, Nil)
     pyramid map { pyramid =>
       val res = pyramid.reverse
-      println(res)
+      res foreach println
       if (pyramid.isEmpty)
         sequence.last
       else {
@@ -40,22 +60,22 @@ object App {
     else if (seq.toSet.size == 1) Some(result)
     else {
       val pyramid = Bricks collect {
-        new PartialFunction[(Func, Func), Option[Seq[Floor]]] {
+        new PartialFunction[(Upstairs, Downstairs), Option[Seq[Floor]]] {
           var nextResult: Option[Seq[Floor]] = None
 
-          override def isDefinedAt(floor: (Func, Func)): Boolean = {
+          override def isDefinedAt(floor: (Upstairs, Downstairs)): Boolean = {
             val (upstairs, downstairs) = floor
-            val up = seq.tails collect {
+            val params = (seq.tails collect {
               case a :: b :: c => List(a, b) ++ c.headOption
-            } collect upstairs
-            val upList = up.toList
-            if (seq.size - upList.size <= 2) {
-              nextResult = build(upList, result :+ (upList -> downstairs))
+            }).toList
+            if (params.init.forall(upstairs.isDefinedAt)) {
+              val up = params collect upstairs
+              nextResult = build(up, result :+ (up -> downstairs))
             }
             nextResult.isDefined
           }
 
-          override def apply(v1: (Func, Func)): Option[Seq[Floor]] = nextResult
+          override def apply(v1: (Upstairs, Downstairs)): Option[Seq[Floor]] = nextResult
         }
       }
       pyramid.flatten.sortBy(_.size).headOption
