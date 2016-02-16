@@ -1,26 +1,29 @@
-import scala.util.Try
-
 
 object App {
   type Func = PartialFunction[List[Long], Long]
-  type Comp = (Long) => Long
+  type Floor = (List[Long], Func)
 
-  val minus: Func = { case a :: b :: z => b - a }
-  val plus: Func = { case a :: b :: z => a + (z.headOption getOrElse b) }
-  val div: Func = { case a :: b :: z if a != 0 && b % a == 0 => b / a }
-  val mult: Func = { case a :: b :: z => a * (z.headOption getOrElse b) }
-  val fiboUp: Func = { case a :: b :: c :: Nil => a * c - b*b }
-  val fiboDown: Func = { case n :: a :: b :: Nil => (n + b*b)/a }
+  val Minus: Func = { case a :: b :: z => b - a }
+  val Plus: Func = { case a :: b :: z => a + (z.headOption getOrElse b) }
+  val Div: Func = { case a :: b :: z if a != 0 && b % a == 0 => b / a }
+  val Mult: Func = { case a :: b :: z => a * (z.headOption getOrElse b) }
+  val DivReverse: Func = { case a :: b :: z if b != 0 && a % b == 0 => a / b }
+  val MultReverse: Func = { case a :: b :: z => a / (z.headOption getOrElse b) }
+  val FiboUp: Func = { case a :: b :: c :: Nil => a * c - b*b }
+  val FiboDown: Func = { case n :: a :: b :: Nil => if (a == 0) n + b else (n + b*b)/a }
 
-  val Bricks: Seq[(Func, Func)] = Seq(minus -> plus, div -> mult, fiboUp -> fiboDown)
+  val Bricks: Seq[(Func, Func)] = Seq(Minus -> Plus, Div -> Mult, DivReverse -> MultReverse, FiboUp -> FiboDown)
 
   def main(args: Array[String]) {
-    val sequence = (args map (_.toLong)).toList
-    val pyramid = build(sequence, Nil) orElse build(sequence.reverse, Nil)
-    pyramid.fold(println("Nothing found")) { pyramid =>
+    println(calcNext((args map (_.toLong)).toList))
+  }
+
+  def calcNext(sequence: List[Long]): Option[Long] = {
+    val pyramid = build(sequence, Nil)
+    pyramid map { pyramid =>
       val res = pyramid.reverse
       println(res)
-      val result = if (pyramid.isEmpty)
+      if (pyramid.isEmpty)
         sequence.last
       else {
         val (num, lastOp) = res.tail.foldLeft(res.head._1.last -> res.head._2) {
@@ -29,17 +32,16 @@ object App {
         }
         lastOp(num +: sequence.takeRight(2))
       }
-      println(result)
     }
   }
 
-  def build(seq: Seq[Long], result: Seq[(List[Long], Func)]): Option[Seq[(List[Long], Func)]] = {
+  def build(seq: Seq[Long], result: Seq[Floor]): Option[Seq[Floor]] = {
     if (seq.size < 2) None
     else if (seq.toSet.size == 1) Some(result)
     else {
       val pyramid = Bricks collect {
-        new PartialFunction[(Func, Func), Option[Seq[(List[Long], Func)]]] {
-          var nextResult: Option[Seq[(List[Long], Func)]] = None
+        new PartialFunction[(Func, Func), Option[Seq[Floor]]] {
+          var nextResult: Option[Seq[Floor]] = None
 
           override def isDefinedAt(floor: (Func, Func)): Boolean = {
             val (upstairs, downstairs) = floor
@@ -53,7 +55,7 @@ object App {
             nextResult.isDefined
           }
 
-          override def apply(v1: (Func, Func)): Option[Seq[(List[Long], Func)]] = nextResult
+          override def apply(v1: (Func, Func)): Option[Seq[Floor]] = nextResult
         }
       }
       pyramid.flatten.sortBy(_.size).headOption

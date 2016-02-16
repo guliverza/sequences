@@ -1,5 +1,4 @@
-This is a an [activator](https://typesafe.com/activator) template for removing
-the boilerplate in setting up a new scala project:
+This is example application of founding sequence next element.
 
 * sbt 0.13.5
 * Cross build against Scala 2.10.4, 2.11.2
